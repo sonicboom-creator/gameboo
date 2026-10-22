@@ -42,10 +42,10 @@ public class Main extends JFrame {
     };
     Main() {
         try {
-            bg = ImageIO.read(new File("/H://img//1.jpg/";));
-            button_start = ImageIO.read(new File("/H://img//pixel-game-button-collection-colorful-260nw-2675896493(6).jpg/";));
-            button_setting = ImageIO.read(new File("/H://img//pixel-game-button-collection-colorful-260nw-2675896493 (4).jpg/"));
-            button_exit = ImageIO.read(new File("/H://img//pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg/"));
+            bg = ImageIO.read(new File("src/img/1.jpg"));
+            button_start = ImageIO.read(new File("src/img/pixel-game-button-collection-colorful-260nw-2675896493(6).jpg"));
+            button_setting = ImageIO.read(new File("src/img/pixel-game-button-collection-colorful-260nw-2675896493 (4).jpg"));
+            button_exit = ImageIO.read(new File("src/img/pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg"));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
