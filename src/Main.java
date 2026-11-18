@@ -31,20 +31,15 @@ public class Main extends JFrame {
     public BufferedImage enemyImage;
     public BufferedImage npcImage;
     public BufferedImage platformImage;
-    private static final String MENU_BG_PATH = "C:/My game/images/1 (1).jpg";        // <-- ФОН МЕНЮ: вставь свой путь
-    private static final String GAME_BG_PATH = "C:/My game/images/3 (1).jpg";        // <-- ФОН ИГРЫ: вставь свой путь
-    private static final String START_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493(6).jpg";      // <-- КНОПКА START: вставь свой путь
-    private static final String SETTINGS_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (4).jpg";// <-- КНОПКА SETTINGS: вставь свой путь
-    private static final String EXIT_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg";        // <-- КНОПКА EXIT: вставь свой путь
-    private static final String PLAYER_PATH = "C:/My game/images/главный персонаж.png";           // <-- ПЕРСОНАЖ: вставь свой путь
-    private static final String ENEMY_PATH = "C:/My game/images/Без названия29.png";             // <-- ВРАГ: вставь свой путь
-    private static final String PLATFORM_PATH = "images/platform.png";      // <-- ПЛАТФОРМЫ: вставь свой путь
-    // Убрать однотонный почти белый фон ТОЛЬКО у героя, врага и NPC.
-    // true = убрать белое поле вокруг персонажей (даже если PNG/JPG непрозрачный).
-    // false = оставить картинки как есть. Если удаляются белые детали одежды — поставь false.
-    // Лучше использовать PNG с настоящим прозрачным фоном.
-    private static final boolean REMOVE_WHITE_SPRITE_BACKGROUND = true; // <-- МОЖНО МЕНЯТЬ
-    // ========================================================================
+    private static final String MENU_BG_PATH = "C:/My game/images/1 (1).jpg";      
+    private static final String GAME_BG_PATH = "C:/My game/images/3 (1).jpg";      
+    private static final String START_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493(6).jpg";   
+    private static final String SETTINGS_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (4).jpg";
+    private static final String EXIT_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg";   
+    private static final String PLAYER_PATH = "C:/My game/images/главный персонаж.png";         
+    private static final String ENEMY_PATH = "C:/My game/images/Без названия29.png";        
+    private static final String PLATFORM_PATH = "images/platform.png";    
+    private static final boolean REMOVE_WHITE_SPRITE_BACKGROUND = true; 
     public int gameState = 0;
     public int windowWidth = 1200;
     public int windowHeight = 900;
@@ -54,7 +49,7 @@ public class Main extends JFrame {
     public ArrayList<Projectile> projectiles = new ArrayList<Projectile>();
     public ArrayList<Particle> particles = new ArrayList<Particle>();
     public Timer timer;
-    private JPanel gamePanel; // Отдельная панель с двойной буферизацией: без мерцания
+    private JPanel gamePanel;
     public Random random = new Random();
     public boolean left = false;
     public boolean right = false;
@@ -175,8 +170,6 @@ public class Main extends JFrame {
     };
     public Main() {
         loadImages();
-        // РИСОВАНИЕ: не рисуем прямо на JFrame. Swing JPanel уже имеет
-        // двойную буферизацию, поэтому фон и картинки не должны мерцать.
         gamePanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -191,12 +184,11 @@ public class Main extends JFrame {
         };
         gamePanel.setPreferredSize(new Dimension(windowWidth, windowHeight));
         gamePanel.setDoubleBuffered(true);
-        // Координаты мыши теперь совпадают с координатами картинки в игре.
         gamePanel.addMouseListener(ml);
         gamePanel.addKeyListener(kl);
         gamePanel.setFocusable(true);
         setContentPane(gamePanel);
-        pack(); // Окно ровно под игровой экран 1200x900, без смещения рамкой
+        pack(); 
         setResizable(false);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Pixel Adventure");
@@ -207,8 +199,6 @@ public class Main extends JFrame {
         timer.start();
     }
     public void loadImages() {
-        // Загружаем файлы по путям, указанным в блоке «СВОИ КАРТИНКИ» выше.
-        // Если картинка отсутствует, игра нарисует прежний стандартный вариант.
         bg = loadImage(MENU_BG_PATH);
         gameBackgroundImage = loadImage(GAME_BG_PATH);
         button_start = loadImage(START_BUTTON_PATH);
@@ -218,14 +208,11 @@ public class Main extends JFrame {
         enemyImage = loadSprite(ENEMY_PATH);
         platformImage = loadImage(PLATFORM_PATH);
     }
- 
     private BufferedImage loadImage(String path) {
         if (path == null || path.trim().isEmpty()) {
             return null;
         }
         String source = path.trim();
-        // GitHub /blob/ показывает HTML-страницу, а не сам файл.
-        // Превращаем такую ссылку в прямую ссылку на картинку.
         if (source.startsWith("https://github.com/") && source.contains("/blob/")) {
             source = source.replace("https://github.com/", "https://raw.githubusercontent.com/")
                            .replaceFirst("/blob/", "/");
@@ -251,7 +238,6 @@ public class Main extends JFrame {
                 System.err.println("[Картинки] Это не PNG/JPG или файл повреждён: " + source);
                 return null;
             }
-            // Поможет понять, какая картинка успешно загрузилась.
             System.out.println("[Картинки] Загружено: " + source + " (" + image.getWidth() + "x"
                 + image.getHeight() + ", "
                 + (image.getColorModel().hasAlpha() ? "есть прозрачность" : "нет прозрачности") + ")");
@@ -262,9 +248,6 @@ public class Main extends JFrame {
             return null; // Если нет картинки, игра продолжает работать.
         }
     }
- 
-    // Для персонажей можно автоматически убрать почти белый фон по краям.
-    // Это не удаляет сложные фоны (город, лес и т. п.): для них нужен прозрачный PNG.
     private BufferedImage loadSprite(String path) {
         BufferedImage image = loadImage(path);
         if (image == null || !REMOVE_WHITE_SPRITE_BACKGROUND) {
@@ -272,13 +255,11 @@ public class Main extends JFrame {
         }
         return removeEdgeWhiteBackground(image);
     }
- 
     private BufferedImage removeEdgeWhiteBackground(BufferedImage original) {
         int w = original.getWidth();
         int h = original.getHeight();
         long count = (long) w * h;
         if (count > 16000000L) {
-            // Ограничение памяти для очень больших картинок.
             return original;
         }
         int[] pixels = original.getRGB(0, 0, w, h, null, 0, w);
@@ -288,9 +269,6 @@ public class Main extends JFrame {
                 return original;
             }
         }
- 
-        // Чтобы не портить белую одежду/детали, запускаем очистку только если
-        // белый цвет занимает существенную часть внешней рамки картинки.
         int whiteBorder = 0;
         int borderSize = 2 * w + 2 * Math.max(0, h - 2);
         for (int x = 0; x < w; x++) {
@@ -304,8 +282,6 @@ public class Main extends JFrame {
         if (whiteBorder < Math.max(1, borderSize / 4)) {
             return original;
         }
- 
-        // Очистка только связанного с краем белого поля, а не всех белых пикселей.
         boolean[] visited = new boolean[pixels.length];
         int[] queue = new int[pixels.length];
         int head = 0;
@@ -361,14 +337,12 @@ public class Main extends JFrame {
         }
         return original;
     }
- 
     private static boolean isNearWhite(int pixel) {
         int r = (pixel >>> 16) & 255;
         int g = (pixel >>> 8) & 255;
         int b = pixel & 255;
         return r >= 235 && g >= 235 && b >= 235;
     }
- 
     public boolean inside(int x, int y, int rx, int ry, int rw, int rh) {
         return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
     }
@@ -426,7 +400,6 @@ public class Main extends JFrame {
     public void startGame() {
         player = new Player(100, 510);
         enemy = new Enemy(850, 510);
-        // Связываем загруженные картинки с игровыми объектами.
         player.sprite = playerImage;
         enemy.sprite = enemyImage;
         platforms.clear();
@@ -455,7 +428,6 @@ public class Main extends JFrame {
         platforms.add(new Platform(100, 390, 200, 25));
         platforms.add(new Platform(480, 620, 180, 25));
         platforms.add(new Platform(950, 320, 180, 25));
-        // Одна картинка платформы используется для всех платформ и растягивается под размер.
         for (Platform platform : platforms) {
             platform.sprite = platformImage;
         }
@@ -537,7 +509,6 @@ public class Main extends JFrame {
             particles.add(new Particle(x, y, vx, vy, color));
         }
     }
-    // Рисование вызывается из gamePanel.paintComponent, а не из JFrame.paint.
     private void renderGame(Graphics2D g2) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         if (gameState == 0) {
@@ -749,7 +720,7 @@ class Player {
     public boolean facingRight = true;
     public boolean attacking = false;
     public boolean damaged = false;
-    public BufferedImage sprite; // Картинка игрока (загружается в Main.loadImages)
+    public BufferedImage sprite; 
     public Player(int startX, int startY) {
         x = startX;
         y = startY;
@@ -918,12 +889,8 @@ class Player {
         return left || right;
     }
     public void draw(Graphics2D g) {
-        // Раньше игрок полностью исчезал через кадр после удара.
-        // Это выглядело как ошибка загрузки картинки, поэтому убрали мерцание.
-        // Неуязвимость после удара осталась в логике takeDamage().
         drawShadow(g);
         if (sprite != null) {
-            // Разворачиваем картинку влево, когда персонаж смотрит налево.
             if (facingRight) {
                 g.drawImage(sprite, x, y, width, height, null);
             } else {
@@ -985,7 +952,7 @@ class Platform {
     public int movementSpeed = 1;
     public int startX;
     public int direction = 1;
-    public BufferedImage sprite; // Своя картинка платформы
+    public BufferedImage sprite; 
     public Platform(int x, int y, int width, int height) {
         this.x = x;
         this.y = y;
@@ -1046,7 +1013,7 @@ class Enemy {
     public boolean onGround = false;
     public boolean rewardGiven = false;
     public boolean alert = false;
-    public BufferedImage sprite; // Своя картинка врага
+    public BufferedImage sprite; 
     public Enemy(int startX, int startY) {
         x = startX;
         y = startY;
@@ -1117,13 +1084,11 @@ class Enemy {
             onGround = true;
         }
     }
-    // Босс не проваливается ниже игрового поля.
     if (y + height > 800) {
         y = 800 - height;
         velocityY = 0;
         onGround = true;
     }
-    // Не даём боссу уйти за боковые границы.
     if (x < 0) {
         x = 0;
     }
@@ -1176,7 +1141,6 @@ class Enemy {
         }
         drawShadow(g);
         if (sprite != null) {
-            // Враг тоже поворачивается в сторону движения.
             if (direction >= 0) {
                 g.drawImage(sprite, x, y, width, height, null);
             } else {
