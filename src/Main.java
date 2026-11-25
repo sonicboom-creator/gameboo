@@ -11,7 +11,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
@@ -31,15 +30,33 @@ public class Main extends JFrame {
     public BufferedImage enemyImage;
     public BufferedImage npcImage;
     public BufferedImage platformImage;
-    private static final String MENU_BG_PATH = "C:/My game/images/1 (1).jpg";      
-    private static final String GAME_BG_PATH = "C:/My game/images/3 (1).jpg";      
-    private static final String START_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493(6).jpg";   
+    public BufferedImage coinImage;
+    public BufferedImage exitImage;
+    public BufferedImage level1ButtonImage;
+    public BufferedImage level2ButtonImage;
+    public BufferedImage backButtonImage;
+    public BufferedImage youWinImage;
+    private static final String COIN_PATH = "C:/My game/images/Без названия37.png";
+    private static final String EXIT_PATH = "C:/My game/images/Без названия32.png";
+    private static final String LEVEL1_BUTTON_PATH = "C:/My game/images/level1.png";
+    private static final String LEVEL2_BUTTON_PATH = "C:/My game/images/level2.png";
+    private static final String BACK_BUTTON_PATH = "C:/My game/images/back.png";
+    private static final String YOU_WIN_PATH = "C:/My game/images/Без названия36.png";
+    public static final int WORLD_WIDTH = 3600;
+    public int cameraX = 0;
+    public int coinCount = 0;
+    public boolean exitUnlocked = false;
+    public ArrayList<Coin> coins = new ArrayList<Coin>();
+    public LevelExit levelExit;
+    private static final String MENU_BG_PATH = "C:/My game/images/1 (1).jpg";
+    private static final String GAME_BG_PATH = "C:/My game/images/3 (1).jpg";
+    private static final String START_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493(6).jpg";
     private static final String SETTINGS_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (4).jpg";
-    private static final String EXIT_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg";   
-    private static final String PLAYER_PATH = "C:/My game/images/главный персонаж.png";         
-    private static final String ENEMY_PATH = "C:/My game/images/Без названия29.png";        
-    private static final String PLATFORM_PATH = "images/platform.png";    
-    private static final boolean REMOVE_WHITE_SPRITE_BACKGROUND = true; 
+    private static final String EXIT_BUTTON_PATH = "C:/My game/images/pixel-game-button-collection-colorful-260nw-2675896493 (5).jpg";
+    private static final String PLAYER_PATH = "C:/My game/images/главный персонаж.png";
+    private static final String ENEMY_PATH = "C:/My game/images/Без названия29.png";
+    private static final String PLATFORM_PATH = "C:/My game/images/Без названия39.png";
+    private static final boolean REMOVE_WHITE_SPRITE_BACKGROUND = true;
     public int gameState = 0;
     public int windowWidth = 1200;
     public int windowHeight = 900;
@@ -48,6 +65,7 @@ public class Main extends JFrame {
     public ArrayList<Platform> platforms = new ArrayList<Platform>();
     public ArrayList<Projectile> projectiles = new ArrayList<Projectile>();
     public ArrayList<Particle> particles = new ArrayList<Particle>();
+    public ArrayList<NPC> npcs = new ArrayList<NPC>();
     public Timer timer;
     private JPanel gamePanel;
     public Random random = new Random();
@@ -55,21 +73,15 @@ public class Main extends JFrame {
     public boolean right = false;
     public boolean crouching = false;
     public boolean attackPressed = false;
-    public boolean dialogue = false;
     public boolean paused = false;
     public int score = 0;
     public int frameCounter = 0;
     public int menuSelection = 0;
-    public int dialogueIndex = 0;
     public int settingsVolume = 5;
     public int settingsDifficulty = 1;
-    public String[] dialogueLines = {
-        "Hello! Welcome to this place.",
-        "There are platforms ahead of you.",
-        "Be careful when you meet an enemy.",
-        "You can attack by pressing J.",
-        "Good luck on your journey!"
-    };
+    public int selectedLevel = 1;
+    public String message = "";
+    public int messageTimer = 0;
     MouseListener ml = new MouseListener() {
         @Override
         public void mouseClicked(MouseEvent e) {
@@ -77,13 +89,24 @@ public class Main extends JFrame {
             int mouseY = e.getY();
             if (gameState == 0) {
                 if (inside(mouseX, mouseY, 880, 350, 150, 70)) {
-                    startGame();
+                    gameState = 5;
                 }
                 if (inside(mouseX, mouseY, 880, 550, 150, 70)) {
                     gameState = 2;
                 }
                 if (inside(mouseX, mouseY, 880, 750, 150, 70)) {
                     System.exit(0);
+                }
+            } else if (gameState == 5) {
+                if (inside(mouseX, mouseY, 350, 350, 200, 100)) {
+                    selectedLevel = 1;
+                    startGame();
+                }
+                if (inside(mouseX, mouseY, 650, 350, 200, 100)) {
+                    selectedLevel = 2;
+                }
+                if (inside(mouseX, mouseY, 450, 650, 300, 70)) {
+                    gameState = 0;
                 }
             } else if (gameState == 2) {
                 if (inside(mouseX, mouseY, 450, 650, 300, 70)) {
@@ -94,8 +117,12 @@ public class Main extends JFrame {
                     paused = false;
                 }
                 if (inside(mouseX, mouseY, 450, 490, 300, 65)) {
-                    gameState = 0;
                     paused = false;
+                    gameState = 0;
+                }
+                if (inside(mouseX, mouseY, 450, 580, 300, 65)) {
+                    paused = false;
+                    gameState = 5;
                 }
             } else if (gameState == 3 || gameState == 4) {
                 if (inside(mouseX, mouseY, 450, 550, 300, 70)) {
@@ -107,18 +134,10 @@ public class Main extends JFrame {
             }
             gamePanel.repaint();
         }
-        @Override
-        public void mousePressed(MouseEvent e) {
-        }
-        @Override
-        public void mouseReleased(MouseEvent e) {
-        }
-        @Override
-        public void mouseEntered(MouseEvent e) {
-        }
-        @Override
-        public void mouseExited(MouseEvent e) {
-        }
+        @Override public void mousePressed(MouseEvent e) {}
+        @Override public void mouseReleased(MouseEvent e) {}
+        @Override public void mouseEntered(MouseEvent e) {}
+        @Override public void mouseExited(MouseEvent e) {}
     };
     KeyListener kl = new KeyListener() {
         @Override
@@ -138,6 +157,16 @@ public class Main extends JFrame {
                 handleGameKeyPressed(code);
             } else if (gameState == 2) {
                 handleSettingsKeyPressed(code);
+            } else if (gameState == 5) {
+                if (code == KeyEvent.VK_LEFT || code == KeyEvent.VK_RIGHT) {
+                    selectedLevel = selectedLevel == 1 ? 2 : 1;
+                }
+                if (code == KeyEvent.VK_ENTER && selectedLevel == 1) {
+                    startGame();
+                }
+                if (code == KeyEvent.VK_ESCAPE) {
+                    gameState = 0;
+                }
             } else if (gameState == 3 || gameState == 4) {
                 if (code == KeyEvent.VK_ENTER) {
                     startGame();
@@ -151,22 +180,12 @@ public class Main extends JFrame {
         @Override
         public void keyReleased(KeyEvent e) {
             int code = e.getKeyCode();
-            if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
-                left = false;
-            }
-            if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
-                right = false;
-            }
-            if (code == KeyEvent.VK_S) {
-                crouching = false;
-            }
-            if (code == KeyEvent.VK_J) {
-                attackPressed = false;
-            }
+            if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) left = false;
+            if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = false;
+            if (code == KeyEvent.VK_S) crouching = false;
+            if (code == KeyEvent.VK_J) attackPressed = false;
         }
-        @Override
-        public void keyTyped(KeyEvent e) {
-        }
+        @Override public void keyTyped(KeyEvent e) {}
     };
     public Main() {
         loadImages();
@@ -188,10 +207,10 @@ public class Main extends JFrame {
         gamePanel.addKeyListener(kl);
         gamePanel.setFocusable(true);
         setContentPane(gamePanel);
-        pack(); 
+        pack();
         setResizable(false);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setTitle("Pixel Adventure");
+        setTitle("Magical");
         setLocationRelativeTo(null);
         setVisible(true);
         gamePanel.requestFocusInWindow();
@@ -207,6 +226,12 @@ public class Main extends JFrame {
         playerImage = loadSprite(PLAYER_PATH);
         enemyImage = loadSprite(ENEMY_PATH);
         platformImage = loadImage(PLATFORM_PATH);
+        coinImage = loadSprite(COIN_PATH);
+        exitImage = loadSprite(EXIT_PATH);
+        level1ButtonImage = loadImage(LEVEL1_BUTTON_PATH);
+        level2ButtonImage = loadImage(LEVEL2_BUTTON_PATH);
+        backButtonImage = loadImage(BACK_BUTTON_PATH);
+        youWinImage = loadImage(YOU_WIN_PATH);.
     }
     private BufferedImage loadImage(String path) {
         if (path == null || path.trim().isEmpty()) {
@@ -245,7 +270,7 @@ public class Main extends JFrame {
         } catch (Exception e) {
             System.err.println("[Картинки] Не удалось загрузить: " + source);
             System.err.println("[Картинки] Причина: " + e.getMessage());
-            return null; // Если нет картинки, игра продолжает работать.
+            return null; 
         }
     }
     private BufferedImage loadSprite(String path) {
@@ -263,7 +288,6 @@ public class Main extends JFrame {
             return original;
         }
         int[] pixels = original.getRGB(0, 0, w, h, null, 0, w);
-        // Если в PNG уже есть прозрачность, ничего менять не нужно.
         for (int pixel : pixels) {
             if ((pixel >>> 24) != 255) {
                 return original;
@@ -312,7 +336,6 @@ public class Main extends JFrame {
         }
         while (head < tail) {
             int p = queue[head++];
-            // Удаляем цвет только у фона, который связан с границей.
             pixels[p] = 0x00000000;
             int x = p % w;
             int y = p / w;
@@ -348,7 +371,7 @@ public class Main extends JFrame {
     }
     public void selectMenuItem() {
         if (menuSelection == 0) {
-            startGame();
+            gameState = 5;
         } else if (menuSelection == 1) {
             gameState = 2;
         } else {
@@ -363,15 +386,9 @@ public class Main extends JFrame {
         if (paused) {
             return;
         }
-        if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
-            left = true;
-        }
-        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
-            right = true;
-        }
-        if (code == KeyEvent.VK_S) {
-            crouching = true;
-        }
+        if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) left = true;
+        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = true;
+        if (code == KeyEvent.VK_S) crouching = true;
         if (code == KeyEvent.VK_W || code == KeyEvent.VK_SPACE || code == KeyEvent.VK_UP) {
             player.jump();
         }
@@ -379,58 +396,103 @@ public class Main extends JFrame {
             player.attack(enemy, particles);
             attackPressed = true;
         }
+        if (code == KeyEvent.VK_H) {
+            player.usePotion();
+        }
     }
     public void handleSettingsKeyPressed(int code) {
         if (code == KeyEvent.VK_ESCAPE || code == KeyEvent.VK_ENTER) {
             gameState = 0;
         }
-        if (code == KeyEvent.VK_LEFT) {
-            settingsVolume = Math.max(0, settingsVolume - 1);
-        }
-        if (code == KeyEvent.VK_RIGHT) {
-            settingsVolume = Math.min(10, settingsVolume + 1);
-        }
-        if (code == KeyEvent.VK_UP) {
-            settingsDifficulty = Math.min(2, settingsDifficulty + 1);
-        }
-        if (code == KeyEvent.VK_DOWN) {
-            settingsDifficulty = Math.max(0, settingsDifficulty - 1);
-        }
+        if (code == KeyEvent.VK_LEFT) settingsVolume = Math.max(0, settingsVolume - 1);
+        if (code == KeyEvent.VK_RIGHT) settingsVolume = Math.min(10, settingsVolume + 1);
+        if (code == KeyEvent.VK_UP) settingsDifficulty = Math.min(2, settingsDifficulty + 1);
+        if (code == KeyEvent.VK_DOWN) settingsDifficulty = Math.max(0, settingsDifficulty - 1);
     }
     public void startGame() {
-        player = new Player(100, 510);
-        enemy = new Enemy(850, 510);
+        player = new Player(100, 640);
         player.sprite = playerImage;
-        enemy.sprite = enemyImage;
         platforms.clear();
         projectiles.clear();
         particles.clear();
+        npcs.clear();
+        coins.clear();
+        enemy = null;
+        levelExit = null;
+        cameraX = 0;
+        coinCount = 0;
+        exitUnlocked = false;
         createLevel();
         score = 0;
         frameCounter = 0;
-        dialogue = false;
-        dialogueIndex = 0;
         paused = false;
         left = false;
         right = false;
         crouching = false;
         attackPressed = false;
+        message = "";
+        messageTimer = 0;
         gameState = 1;
         gamePanel.requestFocusInWindow();
     }
     public void createLevel() {
-        platforms.add(new Platform(0, 750, 1200, 100));
-        platforms.add(new Platform(180, 560, 220, 25));
-        platforms.add(new Platform(650, 430, 200, 25));
-        platforms.add(new Platform(350, 300, 240, 25));
-        platforms.add(new Platform(900, 540, 200, 25));
-        platforms.add(new Platform(750, 180, 220, 25));
-        platforms.add(new Platform(100, 390, 200, 25));
-        platforms.add(new Platform(480, 620, 180, 25));
-        platforms.add(new Platform(950, 320, 180, 25));
+        platforms.add(new Platform(0, 750, WORLD_WIDTH, 100));
+        platforms.add(new Platform(220, 620, 180, 22));
+        platforms.add(new Platform(500, 520, 190, 22));
+        platforms.add(new Platform(800, 620, 190, 22));
+        platforms.add(new Platform(1080, 500, 180, 22));
+        platforms.add(new Platform(1390, 610, 190, 22));
+        platforms.add(new Platform(1680, 500, 200, 22));
+        platforms.add(new Platform(1980, 610, 190, 22));
+        platforms.add(new Platform(2260, 490, 200, 22));
+        platforms.add(new Platform(2540, 610, 190, 22));
+        platforms.add(new Platform(2810, 520, 190, 22));
+        platforms.add(new Platform(3070, 610, 210, 22));
+        addCoins(300, 565);
+        addCoins(580, 465);
+        addCoins(900, 565);
+        addCoins(1150, 445);
+        addCoins(1460, 555);
+        addCoins(1760, 445);
+        addCoins(2070, 555);
+        addCoins(2340, 435);
+        addCoins(2620, 555);
+        addCoins(2890, 465);
+        enemy = new Enemy(3260, 650);
+        enemy.sprite = enemyImage;
+        enemy.patrolLeft = 3150;
+        enemy.patrolRight = 3450;
+        levelExit = new LevelExit(3500, 650, exitImage);
         for (Platform platform : platforms) {
             platform.sprite = platformImage;
         }
+    }
+    public void addCoins(int x, int y) {
+        for (int i = 0; i < 3; i++) {
+            coins.add(new Coin(x + i * 32, y, coinImage));
+        }
+    }
+    public void interactWithNPC() {
+        for (NPC npc : npcs) {
+            if (npc.getBounds().intersects(player.getInteractionBounds())) {
+                if (!npc.used) {
+                    if (npc.type == 1) {
+                        player.potions++;
+                        message = "You received a potion!";
+                    } else {
+                        message = "Be careful! There is danger ahead.";
+                    }
+                    npc.used = true;
+                    messageTimer = 180;
+                } else {
+                    message = "I have nothing more for you.";
+                    messageTimer = 120;
+                }
+                return;
+            }
+        }
+        message = "There is nobody nearby.";
+        messageTimer = 100;
     }
     public void gameLoop() {
         if (gameState != 1 || paused) {
@@ -442,23 +504,24 @@ public class Main extends JFrame {
         updateEnemy();
         updateProjectiles();
         updateParticles();
+        updateNPCs();
+        updateCoins();
+        updateCamera();
         updateWorldChecks();
+        if (messageTimer > 0) messageTimer--;
         gamePanel.repaint();
     }
     public void updatePlayer() {
         player.left = left;
         player.right = right;
         player.crouching = crouching;
-        player.update(platforms, windowWidth, windowHeight);
-        if (player.health <= 0) {
-            gameState = 4;
-        }
+        player.update(platforms, WORLD_WIDTH, windowHeight);
+        if (player.health <= 0) gameState = 4;
     }
     public void updateEnemy() {
-        if (enemy == null || enemy.health <= 0) {
-            return;
-        }
+        if (enemy == null || enemy.health <= 0) return;
         enemy.update(player, platforms, projectiles, frameCounter);
+
         if (enemy.touches(player.getBounds()) && enemy.attackReady()) {
             player.takeDamage(enemy.damage);
             enemy.markAttack();
@@ -469,7 +532,8 @@ public class Main extends JFrame {
         for (int i = projectiles.size() - 1; i >= 0; i--) {
             Projectile projectile = projectiles.get(i);
             projectile.update();
-            if (projectile.isOutside(windowWidth, windowHeight)) {
+
+            if (projectile.isOutside(WORLD_WIDTH, windowHeight)) {
                 projectiles.remove(i);
             } else if (projectile.getBounds().intersects(player.getBounds()) && projectile.fromEnemy) {
                 player.takeDamage(projectile.damage);
@@ -482,21 +546,41 @@ public class Main extends JFrame {
         for (int i = particles.size() - 1; i >= 0; i--) {
             Particle particle = particles.get(i);
             particle.update();
-            if (particle.life <= 0) {
-                particles.remove(i);
-            }
+            if (particle.life <= 0) particles.remove(i);
         }
+    }
+    public void updateNPCs() {
+        for (NPC npc : npcs) npc.update();
+    }
+    public void updateCoins() {
+        for (int i = coins.size() - 1; i >= 0; i--) {
+            Coin coin = coins.get(i);
+            if (!coin.collected && coin.getBounds().intersects(player.getBounds())) {
+                coin.collected = true;
+                coinCount++;
+                score += 10;
+                createDamageParticles(coin.x + 10, coin.y + 10, new Color(255, 220, 50));
+            }
+            if (coin.collected) coins.remove(i);
+        }
+    }
+    public void updateCamera() {
+        int target = player.x + player.width / 2 - windowWidth / 2;
+        cameraX = Math.max(0, Math.min(WORLD_WIDTH - windowWidth, target));
     }
     public void updateWorldChecks() {
         if (enemy != null && enemy.health <= 0 && !enemy.rewardGiven) {
             score += 100;
             enemy.rewardGiven = true;
+            exitUnlocked = true;
             createDamageParticles(enemy.x + 20, enemy.y + 20, Color.YELLOW);
+            message = "The exit is open! Find it at the end of the level.";
+            messageTimer = 220;
         }
-        if (player.y > windowHeight + 100) {
-            player.takeDamage(1000);
-        }
-        if (score >= 100 && enemy.health <= 0) {
+        if (player.y > windowHeight + 100) player.takeDamage(1000);
+
+        if (exitUnlocked && levelExit != null
+                && levelExit.getBounds().intersects(player.getBounds())) {
             gameState = 3;
         }
     }
@@ -515,12 +599,15 @@ public class Main extends JFrame {
             drawMenu(g2);
         } else if (gameState == 1) {
             drawGame(g2);
+            if (paused) drawPause(g2);
         } else if (gameState == 2) {
             drawSettings(g2);
         } else if (gameState == 3) {
             drawEndScreen(g2, true);
         } else if (gameState == 4) {
             drawEndScreen(g2, false);
+        } else if (gameState == 5) {
+            drawLevelSelection(g2);
         }
     }
     public void drawMenu(Graphics2D g) {
@@ -529,8 +616,8 @@ public class Main extends JFrame {
         g.fillRoundRect(760, 170, 390, 660, 35, 35);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 58));
-        g.drawString("PIXEL ADVENTURE", 120, 170);
-        drawMenuButton(g, button_start, "START", 880, 350, menuSelection == 0);
+        g.drawString("ИГРА", 120, 170);
+        drawMenuButton(g, button_start, "PLAY", 880, 350, menuSelection == 0);
         drawMenuButton(g, button_setting, "SETTINGS", 880, 550, menuSelection == 1);
         drawMenuButton(g, button_exit, "EXIT", 880, 750, menuSelection == 2);
         g.setFont(new Font("Arial", Font.PLAIN, 20));
@@ -541,7 +628,8 @@ public class Main extends JFrame {
         if (bg != null) {
             g.drawImage(bg, 0, 0, windowWidth, windowHeight, this);
         } else {
-            g.setPaint(new java.awt.GradientPaint(0, 0, new Color(20, 35, 75), 0, windowHeight, new Color(90, 150, 190)));
+            g.setPaint(new java.awt.GradientPaint(0, 0, new Color(20, 35, 75),
+                0, windowHeight, new Color(90, 150, 190)));
             g.fillRect(0, 0, windowWidth, windowHeight);
             g.setColor(new Color(255, 255, 255, 100));
             for (int i = 0; i < 35; i++) {
@@ -551,7 +639,8 @@ public class Main extends JFrame {
             }
         }
     }
-    public void drawMenuButton(Graphics2D g, BufferedImage image, String text, int x, int y, boolean selected) {
+    public void drawMenuButton(Graphics2D g, BufferedImage image, String text,
+                               int x, int y, boolean selected) {
         if (selected) {
             g.setColor(new Color(255, 220, 90, 100));
             g.fillRoundRect(x - 12, y - 10, 175, 85, 18, 18);
@@ -567,21 +656,52 @@ public class Main extends JFrame {
             g.drawString(text, x + 30, y + 40);
         }
     }
+    public void drawLevelSelection(Graphics2D g) {
+        drawBackground(g);
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRoundRect(250, 180, 700, 560, 30, 30);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 48));
+        g.drawString("SELECT LEVEL", 405, 270);
+        drawImageButton(g, level1ButtonImage, "LEVEL 1", 350, 350, 200, 100);
+        drawImageButton(g, level2ButtonImage, "LEVEL 2", 650, 350, 200, 100);
+        g.setFont(new Font("Arial", Font.PLAIN, 16));
+        g.drawString("COMING SOON", 690, 475);
+        g.setFont(new Font("Arial", Font.PLAIN, 19));
+        g.drawString("Choose level 1 to start the game.", 350, 510);
+        g.drawString("Selected level: " + selectedLevel, 450, 550);
+        drawImageButton(g, backButtonImage, "BACK", 450, 650, 300, 70);
+    }
     public void drawGame(Graphics2D g) {
         drawGameBackground(g);
-        drawPlatforms(g);
-        drawEnemy(g);
-        drawPlayer(g);
-        drawProjectiles(g);
-        drawParticles(g);
+        Graphics2D world = (Graphics2D) g.create();
+        world.translate(-cameraX, 0);
+        drawPlatforms(world);
+        drawCoins(world);
+        drawLevelExit(world);
+        drawEnemy(world);
+        drawPlayer(world);
+        drawProjectiles(world);
+        drawParticles(world);
+        world.dispose();
         drawInterface(g);
+    }
+    public void drawCoins(Graphics2D g) {
+        for (Coin coin : coins) coin.draw(g);
+    }
+    public void drawLevelExit(Graphics2D g) {
+        if (levelExit != null) {
+            levelExit.unlocked = exitUnlocked;
+            levelExit.draw(g);
+        }
     }
     public void drawGameBackground(Graphics2D g) {
         if (gameBackgroundImage != null) {
             g.drawImage(gameBackgroundImage, 0, 0, windowWidth, windowHeight, this);
             return;
         }
-        g.setPaint(new java.awt.GradientPaint(0, 0, new Color(115, 190, 235), 0, windowHeight, new Color(35, 95, 130)));
+        g.setPaint(new java.awt.GradientPaint(0, 0, new Color(115, 190, 235),
+            0, windowHeight, new Color(35, 95, 130)));
         g.fillRect(0, 0, windowWidth, windowHeight);
         g.setColor(new Color(255, 255, 255, 120));
         g.fillOval(930, 80, 100, 100);
@@ -592,48 +712,55 @@ public class Main extends JFrame {
         }
     }
     public void drawPlatforms(Graphics2D g) {
-        for (Platform platform : platforms) {
-            platform.draw(g);
-        }
+        for (Platform platform : platforms) platform.draw(g);
+    }
+    public void drawNPCs(Graphics2D g) {
+        for (NPC npc : npcs) npc.draw(g);
     }
     public void drawEnemy(Graphics2D g) {
-        if (enemy != null) {
-            enemy.draw(g);
-        }
+        if (enemy != null) enemy.draw(g);
     }
     public void drawPlayer(Graphics2D g) {
-        if (player != null) {
-            player.draw(g);
-        }
+        if (player != null) player.draw(g);
     }
     public void drawProjectiles(Graphics2D g) {
-        for (Projectile projectile : projectiles) {
-            projectile.draw(g);
-        }
+        for (Projectile projectile : projectiles) projectile.draw(g);
     }
     public void drawParticles(Graphics2D g) {
-        for (Particle particle : particles) {
-            particle.draw(g);
-        }
+        for (Particle particle : particles) particle.draw(g);
     }
     public void drawInterface(Graphics2D g) {
         g.setColor(new Color(0, 0, 0, 150));
-        g.fillRoundRect(20, 20, 290, 145, 18, 18);
+        g.fillRoundRect(20, 20, 330, 175, 18, 18);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 18));
         g.drawString("Health", 40, 50);
         drawHealthBar(g, 110, 34, 170, 20, player.health, player.maxHealth);
         g.drawString("Potions: " + player.potions, 40, 85);
         g.drawString("Score: " + score, 40, 115);
+        g.drawString("Coins: " + coinCount, 190, 85);
+        g.drawString("Boss: " + (exitUnlocked ? "defeated" : "ahead"), 190, 115);
         g.setFont(new Font("Arial", Font.PLAIN, 14));
-        g.drawString("A/D move   W/Space jump   J attack", 40, 145);
+        g.drawString("A/D move  W/Space jump  J attack", 40, 145);
+        g.drawString("H potion  ESC pause", 40, 170);
+        if (messageTimer > 0) {
+            g.setColor(new Color(0, 0, 0, 185));
+            g.fillRoundRect(300, 760, 600, 55, 15, 15);
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 20));
+            g.drawString(message, 330, 795);
+        }
     }
-    public void drawHealthBar(Graphics2D g, int x, int y, int width, int height, int value, int max) {
+    public void drawHealthBar(Graphics2D g, int x, int y, int width,
+                              int height, int value, int max) {
         g.setColor(Color.DARK_GRAY);
         g.fillRoundRect(x, y, width, height, 8, 8);
+
         int current = Math.max(0, Math.min(width, width * value / Math.max(1, max)));
+
         g.setColor(value > max / 2 ? new Color(60, 210, 90) : new Color(230, 65, 55));
         g.fillRoundRect(x, y, current, height, 8, 8);
+
         g.setColor(Color.WHITE);
         g.drawRoundRect(x, y, width, height, 8, 8);
     }
@@ -645,6 +772,7 @@ public class Main extends JFrame {
         g.drawString("PAUSED", 475, 280);
         drawSimpleButton(g, "CONTINUE", 450, 400, 300, 65);
         drawSimpleButton(g, "MAIN MENU", 450, 490, 300, 65);
+        drawSimpleButton(g, "LEVELS", 450, 580, 300, 65);
     }
     public void drawSettings(Graphics2D g) {
         drawBackground(g);
@@ -658,30 +786,40 @@ public class Main extends JFrame {
         g.drawString("Use LEFT and RIGHT arrows", 420, 405);
         g.drawString("Difficulty: " + difficultyName(), 420, 485);
         g.drawString("Use UP and DOWN arrows", 420, 530);
-        drawSimpleButton(g, "BACK", 450, 650, 300, 65);
+        drawImageButton(g, backButtonImage, "BACK", 450, 650, 300, 65);
     }
     public String difficultyName() {
-        if (settingsDifficulty == 0) {
-            return "Easy";
-        }
-        if (settingsDifficulty == 1) {
-            return "Normal";
-        }
+        if (settingsDifficulty == 0) return "Easy";
+        if (settingsDifficulty == 1) return "Normal";
         return "Hard";
     }
     public void drawEndScreen(Graphics2D g, boolean won) {
         g.setColor(new Color(10, 15, 35));
         g.fillRect(0, 0, windowWidth, windowHeight);
-        g.setColor(won ? new Color(100, 230, 130) : new Color(240, 90, 80));
-        g.setFont(new Font("Arial", Font.BOLD, 58));
-        g.drawString(won ? "YOU WIN!" : "GAME OVER", 420, 300);
+        if (won && youWinImage != null) {
+            g.drawImage(youWinImage, 350, 210, 500, 140, this);
+        } else {
+            g.setColor(won ? new Color(100, 230, 130) : new Color(240, 90, 80));
+            g.setFont(new Font("Arial", Font.BOLD, 58));
+            g.drawString(won ? "YOU WIN!" : "GAME OVER", 420, 300);
+        }
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 25));
         g.drawString("Final score: " + score, 490, 390);
+
         drawSimpleButton(g, "PLAY AGAIN", 450, 550, 300, 70);
         drawSimpleButton(g, "MAIN MENU", 450, 650, 300, 70);
     }
-    public void drawSimpleButton(Graphics2D g, String text, int x, int y, int width, int height) {
+    public void drawImageButton(Graphics2D g, BufferedImage image, String text,
+                                int x, int y, int width, int height) {
+        if (image != null) {
+            g.drawImage(image, x, y, width, height, this);
+        } else {
+            drawSimpleButton(g, text, x, y, width, height);
+        }
+    }
+    public void drawSimpleButton(Graphics2D g, String text, int x, int y,
+                                 int width, int height) {
         g.setColor(new Color(55, 95, 150));
         g.fillRoundRect(x, y, width, height, 18, 18);
         g.setColor(Color.WHITE);
@@ -696,10 +834,10 @@ public class Main extends JFrame {
 class Player {
     public int x;
     public int y;
-    public int width = 220;
-    public int height = 190;
-    public int standingHeight = 190;
-    public int crouchingHeight = 140;
+    public int width = 90;
+    public int height = 110;
+    public int standingHeight = 110;
+    public int crouchingHeight = 80;
     public int health = 100;
     public int maxHealth = 100;
     public int potions = 2;
@@ -708,7 +846,7 @@ class Player {
     public int attackCooldown = 0;
     public int animationFrame = 0;
     public int animationCounter = 0;
-    public double speed = 5.0;
+    public double speed = 3.0;
     public double jumpPower = -16.0;
     public double gravity = 0.75;
     public double velocityX = 0;
@@ -720,7 +858,7 @@ class Player {
     public boolean facingRight = true;
     public boolean attacking = false;
     public boolean damaged = false;
-    public BufferedImage sprite; 
+    public BufferedImage sprite;
     public Player(int startX, int startY) {
         x = startX;
         y = startY;
@@ -735,15 +873,10 @@ class Player {
         checkScreenBounds(screenHeight);
     }
     public void updateTimers() {
-        if (invulnerability > 0) {
-            invulnerability--;
-        }
-        if (attackCooldown > 0) {
-            attackCooldown--;
-        }
-        if (invulnerability == 0) {
-            damaged = false;
-        }
+        if (invulnerability > 0) invulnerability--;
+        if (attackCooldown > 0) attackCooldown--;
+        if (invulnerability == 0) damaged = false;
+        if (attackCooldown <= 18) attacking = false;
     }
     public void updateMovement() {
         velocityX = 0;
@@ -755,9 +888,7 @@ class Player {
             velocityX = speed;
             facingRight = true;
         }
-        if (crouching) {
-            velocityX *= 0.45;
-        }
+        if (crouching) velocityX *= 0.45;
     }
     public void updateCrouch() {
         int oldHeight = height;
@@ -766,28 +897,19 @@ class Player {
         } else {
             height = standingHeight;
         }
-        if (height < oldHeight) {
-            y += oldHeight - height;
-        }
-        if (height > oldHeight) {
-            y -= height - oldHeight;
-        }
+        if (height < oldHeight) y += oldHeight - height;
+        if (height > oldHeight) y -= height - oldHeight;
     }
     public void updateHorizontalPosition(int screenWidth) {
         x += (int) velocityX;
-        if (x < 0) {
-            x = 0;
-        }
-        if (x + width > screenWidth) {
-            x = screenWidth - width;
-        }
+
+        if (x < 0) x = 0;
+        if (x + width > screenWidth) x = screenWidth - width;
     }
     public void updateVerticalPosition(ArrayList<Platform> platforms) {
         int oldY = y;
         velocityY += gravity;
-        if (velocityY > 18) {
-            velocityY = 18;
-        }
+        if (velocityY > 18) velocityY = 18;
         y += (int) velocityY;
         onGround = false;
         for (Platform platform : platforms) {
@@ -804,8 +926,8 @@ class Player {
             }
             boolean hittingBottom = oldY >= platform.y + platform.height
                 && y <= platform.y + platform.height
-                && horizontal
-                && velocityY < 0;
+                && horizontal && velocityY < 0;
+
             if (hittingBottom) {
                 y = platform.y + platform.height;
                 velocityY = 0;
@@ -813,18 +935,14 @@ class Player {
         }
     }
     public void checkScreenBounds(int screenHeight) {
-        if (y > screenHeight + 150) {
-            health = 0;
-        }
+        if (y > screenHeight + 150) health = 0;
     }
     public void updateAnimation() {
         animationCounter++;
         if (animationCounter >= 8) {
             animationCounter = 0;
             animationFrame++;
-            if (animationFrame > 3) {
-                animationFrame = 0;
-            }
+            if (animationFrame > 3) animationFrame = 0;
         }
     }
     public void jump() {
@@ -834,9 +952,7 @@ class Player {
         }
     }
     public void attack(Enemy enemy, ArrayList<Particle> particles) {
-        if (attackCooldown > 0 || enemy == null || enemy.health <= 0) {
-            return;
-        }
+        if (attackCooldown > 0 || enemy == null || enemy.health <= 0) return;
         attacking = true;
         attackCooldown = 28;
         Rectangle area = getAttackBounds();
@@ -847,8 +963,11 @@ class Player {
         }
     }
     public Rectangle getAttackBounds() {
-        int attackX = facingRight ? x + width : x - 65;
-        return new Rectangle(attackX, y + 12, 65, height - 18);
+        int attackX = facingRight ? x + width : x - 45;
+        return new Rectangle(attackX, y + 12, 45, height - 18);
+    }
+    public Rectangle getInteractionBounds() {
+        return new Rectangle(x - 35, y - 15, width + 70, height + 30);
     }
     public void addAttackParticles(ArrayList<Particle> particles) {
         int centerX = facingRight ? x + width + 10 : x - 10;
@@ -856,25 +975,22 @@ class Player {
         for (int i = 0; i < 8; i++) {
             double vx = (Math.random() - 0.5) * 6;
             double vy = (Math.random() - 0.5) * 6;
-            particles.add(new Particle(centerX, centerY, vx, vy, new Color(255, 230, 100)));
+            particles.add(new Particle(centerX, centerY, vx, vy,
+                new Color(255, 230, 100)));
         }
     }
     public void takeDamage(int amount) {
-        if (invulnerability > 0 || health <= 0) {
-            return;
-        }
+        if (invulnerability > 0 || health <= 0) return;
+
         health -= amount;
-        if (health < 0) {
-            health = 0;
-        }
+        if (health < 0) health = 0;
+
         invulnerability = 55;
         damaged = true;
     }
     public void heal(int amount) {
         health += amount;
-        if (health > maxHealth) {
-            health = maxHealth;
-        }
+        if (health > maxHealth) health = maxHealth;
     }
     public void usePotion() {
         if (potions > 0 && health < maxHealth) {
@@ -883,7 +999,7 @@ class Player {
         }
     }
     public Rectangle getBounds() {
-        return new Rectangle(x, y, width, height);
+        return new Rectangle(x + 12, y + 8, width - 24, height - 8);
     }
     public boolean isMoving() {
         return left || right;
@@ -903,8 +1019,11 @@ class Player {
             drawFace(g);
             drawLegs(g);
         }
-        if (attacking && attackCooldown > 18) {
-            drawAttackEffect(g);
+        if (attacking && attackCooldown > 18) drawAttackEffect(g);
+
+        if (damaged) {
+            g.setColor(new Color(255, 40, 40, 90));
+            g.fillRect(x, y, width, height);
         }
     }
     public void drawShadow(Graphics2D g) {
@@ -937,7 +1056,8 @@ class Player {
     public void drawAttackEffect(Graphics2D g) {
         g.setColor(new Color(255, 245, 170, 180));
         Rectangle area = getAttackBounds();
-        g.drawArc(area.x, area.y, area.width, area.height, facingRight ? 270 : 90, 180);
+        g.drawArc(area.x, area.y, area.width, area.height,
+            facingRight ? 270 : 90, 180);
     }
 }
 class Platform {
@@ -952,7 +1072,7 @@ class Platform {
     public int movementSpeed = 1;
     public int startX;
     public int direction = 1;
-    public BufferedImage sprite; 
+    public BufferedImage sprite;
     public Platform(int x, int y, int width, int height) {
         this.x = x;
         this.y = y;
@@ -961,16 +1081,10 @@ class Platform {
         startX = x;
     }
     public void update() {
-        if (!moving || movementRange <= 0) {
-            return;
-        }
+        if (!moving || movementRange <= 0) return;
         x += movementSpeed * direction;
-        if (x > startX + movementRange) {
-            direction = -1;
-        }
-        if (x < startX - movementRange) {
-            direction = 1;
-        }
+        if (x > startX + movementRange) direction = -1;
+        if (x < startX - movementRange) direction = 1;
     }
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
@@ -992,13 +1106,71 @@ class Platform {
         }
     }
 }
+class Coin {
+    public int x;
+    public int y;
+    public int size = 24;
+    public boolean collected = false;
+    public BufferedImage sprite;
+    public Coin(int x, int y, BufferedImage sprite) {
+        this.x = x;
+        this.y = y;
+        this.sprite = sprite;
+    }
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, size, size);
+    }
+    public void draw(Graphics2D g) {
+        if (collected) return;
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, size, size, null);
+        } else {
+            g.setColor(new Color(255, 205, 35));
+            g.fillOval(x, y, size, size);
+            g.setColor(new Color(255, 245, 150));
+            g.drawOval(x + 5, y + 4, size - 10, size - 8);
+        }
+    }
+}
+class LevelExit {
+    public int x;
+    public int y;
+    public int width = 70;
+    public int height = 100;
+    public boolean unlocked = false;
+    public BufferedImage sprite;
+    public LevelExit(int x, int y, BufferedImage sprite) {
+        this.x = x;
+        this.y = y;
+        this.sprite = sprite;
+    }
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, width, height);
+    }
+    public void draw(Graphics2D g) {
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            g.setColor(unlocked ? new Color(70, 210, 120) : new Color(90, 90, 100));
+            g.fillRoundRect(x, y, width, height, 12, 12);
+            g.setColor(Color.WHITE);
+            g.drawRoundRect(x, y, width, height, 12, 12);
+            g.drawOval(x + 24, y + 42, 8, 8);
+        }
+        if (!unlocked) {
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 14));
+            g.drawString("LOCKED", x - 5, y - 10);
+        }
+    }
+}
 class Enemy {
     public int x;
     public int y;
-    public int width = 220;
-    public int height = 190;
+    public int width = 90;
+    public int height = 100;
     public int health = 190;
-    public int maxHealth = 140;
+    public int maxHealth = 190;
     public int damage = 12;
     public int attackTimer = 0;
     public int attackDelay = 75;
@@ -1013,14 +1185,15 @@ class Enemy {
     public boolean onGround = false;
     public boolean rewardGiven = false;
     public boolean alert = false;
-    public BufferedImage sprite; 
+    public BufferedImage sprite;
     public Enemy(int startX, int startY) {
         x = startX;
         y = startY;
         patrolLeft = Math.max(0, startX - 150);
         patrolRight = startX + 150;
     }
-    public void update(Player player, ArrayList<Platform> platforms, ArrayList<Projectile> projectiles, int frame) {
+    public void update(Player player, ArrayList<Platform> platforms,
+                       ArrayList<Projectile> projectiles, int frame) {
         updateTimers();
         updateDetection(player);
         updateMovement(player);
@@ -1029,73 +1202,55 @@ class Enemy {
         tryRangedAttack(player, projectiles, frame);
     }
     public void updateTimers() {
-        if (attackTimer > 0) {
-            attackTimer--;
-        }
+        if (attackTimer > 0) attackTimer--;
     }
     public void updateDetection(Player player) {
         int distance = Math.abs(player.x - x);
         alert = distance < 360 && Math.abs(player.y - y) < 160;
     }
     public void updateMovement(Player player) {
-        if (health <= 0) {
-            return;
-        }
+        if (health <= 0) return;
         if (alert) {
             direction = player.x < x ? -1 : 1;
-            if (Math.abs(player.x - x) > 65) {
-                x += direction * 2;
-            }
+            if (Math.abs(player.x - x) > 65) x += direction * 2;
         } else {
             x += direction;
-            if (x < patrolLeft) {
-                direction = 1;
-            }
-            if (x > patrolRight) {
-                direction = -1;
-            }
+            if (x < patrolLeft) direction = 1;
+            if (x > patrolRight) direction = -1;
         }
         if (knockback != 0) {
             x += (int) knockback;
             knockback *= 0.75;
-            if (Math.abs(knockback) < 0.5) {
-                knockback = 0;
-            }
+            if (Math.abs(knockback) < 0.5) knockback = 0;
         }
     }
     public void updateGravity(ArrayList<Platform> platforms) {
-    int oldY = y;
-    velocityY += gravity;
-    if (velocityY > 15) {
-        velocityY = 15;
-    }
-    y += (int) velocityY;
-    onGround = false;
-    for (Platform platform : platforms) {
-        boolean horizontal =
-            x < platform.x + platform.width &&
-            x + width > platform.x;
-        boolean falling =
-            oldY + height <= platform.y &&
-            y + height >= platform.y;
-        if (horizontal && falling && velocityY >= 0) {
-            y = platform.y - height;
+        int oldY = y;
+        velocityY += gravity;
+        if (velocityY > 15) velocityY = 15;
+        y += (int) velocityY;
+        onGround = false;
+        for (Platform platform : platforms) {
+            boolean horizontal = x + 8 < platform.x + platform.width
+                && x + width - 8 > platform.x;
+
+            boolean falling = oldY + height <= platform.y
+                && y + height >= platform.y;
+
+            if (horizontal && falling && velocityY >= 0) {
+                y = platform.y - height;
+                velocityY = 0;
+                onGround = true;
+            }
+        }
+        if (y + height > 750) {
+            y = 750 - height;
             velocityY = 0;
             onGround = true;
         }
+        if (x < 0) x = 0;
+        if (x + width > Main.WORLD_WIDTH) x = Main.WORLD_WIDTH - width;
     }
-    if (y + height > 800) {
-        y = 800 - height;
-        velocityY = 0;
-        onGround = true;
-    }
-    if (x < 0) {
-        x = 0;
-    }
-    if (x + width > 1200) {
-        x = 1200 - width;
-    }
-}
     public void updateAnimation() {
         animationCounter++;
         if (animationCounter >= 10) {
@@ -1104,12 +1259,12 @@ class Enemy {
         }
     }
     public void tryRangedAttack(Player player, ArrayList<Projectile> projectiles, int frame) {
-        if (!alert || attackTimer > 0 || health <= 0) {
-            return;
-        }
+        if (!alert || attackTimer > 0 || health <= 0) return;
+
         if (Math.abs(player.x - x) > 130 && Math.abs(player.x - x) < 330) {
             int directionToPlayer = player.x < x ? -1 : 1;
-            projectiles.add(new Projectile(x + width / 2, y + 28, directionToPlayer * 5, 0, true, damage));
+            projectiles.add(new Projectile(x + width / 2, y + 28,
+                directionToPlayer * 5, 0, true, damage));
             attackTimer = attackDelay;
         }
     }
@@ -1124,15 +1279,13 @@ class Enemy {
     }
     public void takeDamage(int amount) {
         health -= amount;
-        if (health < 0) {
-            health = 0;
-        }
+        if (health < 0) health = 0;
     }
     public void knockBack(double amount) {
         knockback = amount;
     }
     public Rectangle getBounds() {
-        return new Rectangle(x, y, width, height);
+        return new Rectangle(x + 8, y + 5, width - 16, height - 5);
     }
     public void draw(Graphics2D g) {
         if (health <= 0) {
@@ -1153,9 +1306,7 @@ class Enemy {
             drawEyes(g);
         }
         drawHealth(g);
-        if (alert) {
-            drawAlert(g);
-        }
+        if (alert) drawAlert(g);
     }
     public void drawShadow(Graphics2D g) {
         g.setColor(new Color(0, 0, 0, 55));
@@ -1196,6 +1347,44 @@ class Enemy {
         g.fillOval(x, y + height - 18, width, 18);
     }
 }
+class NPC {
+    public int x;
+    public int y;
+    public int width = 55;
+    public int height = 75;
+    public int type;
+    public boolean used = false;
+    public int animation = 0;
+    public NPC(int x, int y, int type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+    }
+    public void update() {
+        animation++;
+    }
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, width, height);
+    }
+    public void draw(Graphics2D g) {
+        int bob = (animation / 20) % 2;
+        g.setColor(new Color(0, 0, 0, 55));
+        g.fillOval(x + 3, y + height - 3, width - 6, 9);
+        g.setColor(type == 1 ? new Color(45, 150, 90) : new Color(100, 85, 175));
+        g.fillRoundRect(x + 8, y + 25 + bob, width - 16, height - 27, 10, 10);
+        g.setColor(new Color(235, 185, 145));
+        g.fillOval(x + 12, y + bob, width - 24, 30);
+        g.setColor(new Color(65, 45, 35));
+        g.fillArc(x + 11, y - 3 + bob, width - 22, 18, 0, 180);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 13));
+        g.drawString(type == 1 ? "!" : "?", x + 22, y - 8);
+        if (used) {
+            g.setColor(new Color(220, 220, 220));
+            g.drawString("OK", x + 17, y + height + 13);
+        }
+    }
+}
 class Projectile {
     public double x;
     public double y;
@@ -1205,7 +1394,8 @@ class Projectile {
     public int damage;
     public boolean fromEnemy;
     public int life = 180;
-    public Projectile(double x, double y, double velocityX, double velocityY, boolean fromEnemy, int damage) {
+    public Projectile(double x, double y, double velocityX, double velocityY,
+                      boolean fromEnemy, int damage) {
         this.x = x;
         this.y = y;
         this.velocityX = velocityX;
@@ -1222,7 +1412,8 @@ class Projectile {
         return new Rectangle((int) x, (int) y, size, size);
     }
     public boolean isOutside(int width, int height) {
-        return life <= 0 || x < -size || x > width + size || y < -size || y > height + size;
+        return life <= 0 || x < -size || x > width + size
+            || y < -size || y > height + size;
     }
     public void draw(Graphics2D g) {
         g.setColor(fromEnemy ? new Color(255, 110, 60) : new Color(255, 235, 90));
@@ -1230,7 +1421,6 @@ class Projectile {
         g.setColor(new Color(255, 255, 255, 150));
         g.drawOval((int) x, (int) y, size, size);
     }
-}
 class Particle {
     public double x;
     public double y;
@@ -1252,16 +1442,14 @@ class Particle {
         y += velocityY;
         velocityY += 0.12;
         life--;
-        if (size > 1 && life % 5 == 0) {
-            size--;
-        }
+        if (size > 1 && life % 5 == 0) size--;
     }
     public void draw(Graphics2D g) {
-        if (life <= 0) {
-            return;
-        }
+        if (life <= 0) return;
         int alpha = Math.max(0, Math.min(255, life * 255 / maxLife));
-        Color drawColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
+        Color drawColor = new Color(color.getRed(), color.getGreen(),
+            color.getBlue(), alpha);
+
         g.setColor(drawColor);
         g.fillOval((int) x, (int) y, size, size);
     }
